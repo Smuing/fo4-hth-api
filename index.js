@@ -7,9 +7,7 @@ import dotenv from "dotenv";
 const app = express();
 
 const corsOptions ={
-   origin:'https://smuing.github.io', 
-  //  credentials:true,
-  //  optionSuccessStatus:200,
+   origin:'https://smuing.github.io'
 }
 
 app.use(cors(corsOptions))
@@ -19,7 +17,6 @@ const apiUrl = "https://api.nexon.co.kr/fifaonline4/v1.0";
 const HEADER = { Authorization: process.env.API_KEY };
 
 app.get("/search", (req, res) => {
-  // res.header("Access-Control-Allow-Origin", "*");
   const firstInput = req.query.first;
   const secondInput = req.query.second;
   if (firstInput === undefined || secondInput === undefined) {
@@ -49,7 +46,6 @@ app.get("/search", (req, res) => {
             },
             async (err, response, body) => {
               body = JSON.parse(body);
-               console.log(body);
               if (body.length === 0) {
                 res.json({ message: "No last 30 matches" });
               } else {
