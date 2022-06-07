@@ -7,7 +7,7 @@ import dotenv from "dotenv";
 const app = express();
 
 const corsOptions ={
-   origin:'https://smuing.github.io/fo4_hth', 
+   origin:'https://smuing.github.io', 
   //  credentials:true,
   //  optionSuccessStatus:200,
 }
