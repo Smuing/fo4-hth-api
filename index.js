@@ -7,9 +7,9 @@ import dotenv from "dotenv";
 const app = express();
 
 const corsOptions ={
-   origin:'*', 
-   credentials:true,
-   optionSuccessStatus:200,
+   origin:'https://smuing.github.io/fo4_hth', 
+  //  credentials:true,
+  //  optionSuccessStatus:200,
 }
 
 app.use(cors(corsOptions))
@@ -19,8 +19,7 @@ const apiUrl = "https://api.nexon.co.kr/fifaonline4/v1.0";
 const HEADER = { Authorization: process.env.API_KEY };
 
 app.get("/search", (req, res) => {
-   console.log(HEADER);
-  res.header("Access-Control-Allow-Origin", "*");
+  // res.header("Access-Control-Allow-Origin", "*");
   const firstInput = req.query.first;
   const secondInput = req.query.second;
   if (firstInput === undefined || secondInput === undefined) {
