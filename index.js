@@ -37,7 +37,7 @@ app.get("/search", (req, res) => {
         } else {
           var totalMatch = 0;
           var matchData = [];
-          const matchTypes = [30, 40, 50, 60];
+          const matchTypes = [30, 40];
 
           for (const matchType of matchTypes) {
             await fetch(
