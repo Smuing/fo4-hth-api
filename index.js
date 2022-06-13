@@ -53,10 +53,12 @@ app.get("/search", (req, res) => {
                 accessIds.push(body.accessId);
 
                 var totalMatch = 0;
-                var matchData = [[], []];
+                var totalWin = 0;
+                var totalDraw = 0;
+                var totalLose = 0;
+                var matchData = [];
                 const matchTypes = [30, 40];
 
-                var i = 0;
                 for (const userId of accessIds) {
                   for await (const matchType of matchTypes) {
                     await fetch(
@@ -72,78 +74,97 @@ app.get("/search", (req, res) => {
                           return;
                         } else {
                           for (const matchId of body) {
-                            const data = await fetch(
-                              `${apiUrl}/matches/${matchId}`,
-                              {
-                                method: "GET",
-                                headers: HEADER,
-                              }
-                            ).then((response) => response.json());
-                            const matchInfo = data.matchInfo;
-                            if (
-                              matchInfo[0].matchDetail.matchEndType == 0 &&
-                              matchInfo[1].matchDetail.matchEndType == 0
-                            ) {
+                            if (matchData.find(match => match.id == matchId) == undefined) {
+                              const data = await fetch(
+                                `${apiUrl}/matches/${matchId}`,
+                                {
+                                  method: "GET",
+                                  headers: HEADER,
+                                }
+                              ).then((response) => response.json());
+                              const matchInfo = data.matchInfo;
                               if (
-                                matchInfo[0].accessId ==
-                                  accessIds.find((id) => id != userId) ||
-                                matchInfo[1].accessId ==
-                                  accessIds.find((id) => id != userId)
+                                matchInfo[0].matchDetail.matchEndType == 0 &&
+                                matchInfo[1].matchDetail.matchEndType == 0
                               ) {
-                                totalMatch++;
-                                const firstData =
-                                  matchInfo[
-                                    matchInfo[0].nickname == secondInput ? 1 : 0
-                                  ];
-                                const secondData =
-                                  matchInfo[
-                                    matchInfo[0].nickname == secondInput ? 0 : 1
-                                  ];
                                 if (
-                                  firstData.shoot.shootOutScore > 0 ||
-                                  secondData.shoot.shootOutScore > 0
+                                  matchInfo[0].accessId ==
+                                  accessIds.find((id) => id != userId) ||
+                                  matchInfo[1].accessId ==
+                                  accessIds.find((id) => id != userId)
                                 ) {
-                                  matchData[i].push({
-                                    id: data.matchId,
-                                    date: data.matchDate,
-                                    matchResult:
-                                      firstData.matchDetail.matchResult,
-                                    firstGoal: firstData.shoot.goalTotalDisplay,
-                                    secondGoal:
-                                      secondData.shoot.goalTotalDisplay,
-                                    shootOut: true,
-                                    firstShootOutGoal:
-                                      firstData.shoot.shootOutScore,
-                                    secondShootOutGoal:
-                                      secondData.shoot.shootOutScore,
-                                  });
-                                } else {
-                                  matchData[i].push({
-                                    id: data.matchId,
-                                    date: data.matchDate,
-                                    matchResult:
-                                      firstData.matchDetail.matchResult,
-                                    firstGoal: firstData.shoot.goalTotalDisplay,
-                                    secondGoal:
-                                      secondData.shoot.goalTotalDisplay,
-                                  });
+                                  totalMatch++;
+                                  const firstData =
+                                    matchInfo[
+                                    matchInfo[0].nickname == secondInput ? 1 : 0
+                                    ];
+                                  const secondData =
+                                    matchInfo[
+                                    matchInfo[0].nickname == secondInput ? 0 : 1
+                                    ];
+
+                                  if (firstData.matchDetail.matchResult == "승") {
+                                    totalWin++;
+                                  } else if (firstData.matchDetail.matchResult == "무") {
+                                    totalDraw++;
+                                  } else {
+                                    totalLose++;
+                                  }
+
+                                  if (
+                                    firstData.shoot.shootOutScore > 0 ||
+                                    secondData.shoot.shootOutScore > 0
+                                  ) {
+                                    matchData.push({
+                                      id: data.matchId,
+                                      date: data.matchDate,
+                                      matchResult:
+                                        firstData.matchDetail.matchResult,
+                                      firstGoal: firstData.shoot.goalTotalDisplay,
+                                      secondGoal:
+                                        secondData.shoot.goalTotalDisplay,
+                                      shootOut: true,
+                                      firstShootOutGoal:
+                                        firstData.shoot.shootOutScore,
+                                      secondShootOutGoal:
+                                        secondData.shoot.shootOutScore,
+                                    });
+                                  } else {
+                                    matchData.push({
+                                      id: data.matchId,
+                                      date: data.matchDate,
+                                      matchResult:
+                                        firstData.matchDetail.matchResult,
+                                      firstGoal: firstData.shoot.goalTotalDisplay,
+                                      secondGoal:
+                                        secondData.shoot.goalTotalDisplay,
+                                    });
+                                  }
                                 }
                               }
+                            } else {
+                              continue;
                             }
                           }
                         }
                       });
                   }
-                  i++;
                 }
                 if (totalMatch === 0) {
                   res.json({ message: "No last matches" });
                 } else {
-                  if (matchData[0].length >= matchData[1].length) {
-                    res.json(matchData[0]);
-                  } else {
-                    res.json(matchData[1]);
-                  }
+                  res.json({ 
+                    totalData: { 
+                      totalMatch, 
+                      totalResult: [totalWin, totalDraw, totalLose],
+                      totalPer: [
+                        Math.round((totalWin / totalMatch) * 100),
+                        Math.round((totalDraw / totalMatch) * 100),
+                        Math.round((totalLose / totalMatch) * 100),
+                      ]
+                    }, 
+                    matchData 
+                  });
                 }
               }
             }
