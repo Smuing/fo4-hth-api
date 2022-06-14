@@ -7,7 +7,7 @@ import dotenv from "dotenv";
 const app = express();
 
 const corsOptions = {
-  origin: ["https://smuing.github.io", "http://localhost:5500"],
+  origin: "https://smuing.github.io",
 };
 
 app.use(cors(corsOptions));
