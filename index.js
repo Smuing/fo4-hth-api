@@ -19,7 +19,7 @@ const HEADER = { Authorization: process.env.API_KEY };
 app.get("/search", (req, res) => {
   const firstInput = req.query.first;
   const secondInput = req.query.second;
-  const offset = req.query.offset;
+  const limit = req.query.limit;
   if (firstInput === undefined || secondInput === undefined) {
     res.status(404).json({ message: "{first} or {second} is required" });
   } else {
@@ -60,9 +60,8 @@ app.get("/search", (req, res) => {
                 var matchData = [];
 
                 for await (const userId of accessIds) {
-
                   await fetch(
-                    `${apiUrl}/users/${userId}/matches?matchtype=40&limit=${offset?offset:"30"}`,
+                    `${apiUrl}/users/${userId}/matches?matchtype=40&limit=${limit}`,
                     {
                       method: "GET",
                       headers: HEADER,
@@ -74,7 +73,10 @@ app.get("/search", (req, res) => {
                         return;
                       } else {
                         for (const matchId of body) {
-                          if (matchData.find(match => match.id == matchId) == undefined) {
+                          if (
+                            matchData.find((match) => match.id == matchId) ==
+                            undefined
+                          ) {
                             const data = await fetch(
                               `${apiUrl}/matches/${matchId}`,
                               {
@@ -89,23 +91,29 @@ app.get("/search", (req, res) => {
                             ) {
                               if (
                                 matchInfo[0].accessId ==
-                                accessIds.find((id) => id != userId) ||
+                                  accessIds.find((id) => id != userId) ||
                                 matchInfo[1].accessId ==
-                                accessIds.find((id) => id != userId)
+                                  accessIds.find((id) => id != userId)
                               ) {
                                 totalMatch++;
                                 const firstData =
                                   matchInfo[
-                                  matchInfo[0].nickname == secondInput ? 1 : 0
+                                    matchInfo[0].accessId == accessIds[0]
+                                      ? 0
+                                      : 1
                                   ];
                                 const secondData =
                                   matchInfo[
-                                  matchInfo[0].nickname == secondInput ? 0 : 1
+                                    matchInfo[0].accessId == accessIds[0]
+                                      ? 1
+                                      : 0
                                   ];
 
                                 if (firstData.matchDetail.matchResult == "승") {
                                   totalWin++;
-                                } else if (firstData.matchDetail.matchResult == "무") {
+                                } else if (
+                                  firstData.matchDetail.matchResult == "무"
+                                ) {
                                   totalDraw++;
                                 } else {
                                   totalLose++;
@@ -148,7 +156,6 @@ app.get("/search", (req, res) => {
                         }
                       }
                     });
-
                 }
                 if (totalMatch === 0) {
                   res.json({ message: "No last matches" });
@@ -161,9 +168,9 @@ app.get("/search", (req, res) => {
                         Math.round((totalWin / totalMatch) * 100),
                         Math.round((totalDraw / totalMatch) * 100),
                         Math.round((totalLose / totalMatch) * 100),
-                      ]
+                      ],
                     },
-                    matchData
+                    matchData,
                   });
                 }
               }
