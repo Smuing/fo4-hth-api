@@ -30,6 +30,7 @@ const HEADER = { Authorization: process.env.API_KEY };
 app.get("/search", (req, res) => {
   const firstInput = req.query.first;
   const secondInput = req.query.second;
+  const offset = req.query.offset;
   const limit = req.query.limit;
   if (firstInput === undefined || secondInput === undefined) {
     res.status(404).json({ message: "{first} or {second} is required" });
@@ -72,7 +73,9 @@ app.get("/search", (req, res) => {
 
                 for await (const userId of accessIds) {
                   await fetch(
-                    `${apiUrl}/users/${userId}/matches?matchtype=40&limit=${limit}`,
+                    `${apiUrl}/users/${userId}/matches?matchtype=40&offset=${
+                      offset ? offset : "0"
+                    }&limit=${limit ? limit : "30"}`,
                     {
                       method: "GET",
                       headers: HEADER,
