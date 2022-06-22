@@ -6,7 +6,7 @@ import dotenv from "dotenv";
 
 const app = express();
 
-const whitelist = ["https://smuing.github.io"];
+const whitelist = ["https://smuing.github.io", "http://localhost:8000"];
 const corsOptions = {
   origin: function (origin, callback) {
     if (whitelist.indexOf(origin) !== -1) {
