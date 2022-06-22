@@ -7,7 +7,8 @@ import dotenv from "dotenv";
 const app = express();
 
 const whitelist = ["https://smuing.github.io", "http://localhost:5501"];
-const corsOptions = {
+app.use((req, res, next)=>{
+  cors({
   origin: function (origin, callback) {
     if (whitelist.indexOf(origin) !== -1) {
       callback(null, true);
@@ -15,8 +16,8 @@ const corsOptions = {
       callback(res.sand("Not Allowed Origin"));
     }
   },
-};
-app.use(cors(corsOptions));
+})
+});
 
 dotenv.config({ path: "./.env" });
 
