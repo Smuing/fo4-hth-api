@@ -6,11 +6,18 @@ import dotenv from "dotenv";
 
 const app = express();
 
+const whitelist = ["https://smuing.github.io"];
 const corsOptions = {
-  origin: "https://smuing.github.io",
+  origin: function (origin, callback) {
+    if (whitelist.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      callback(new Error("Not Allowed Origin!"));
+    }
+  },
 };
-
 app.use(cors(corsOptions));
+
 dotenv.config({ path: "./.env" });
 
 const apiUrl = "https://api.nexon.co.kr/fifaonline4/v1.0";
