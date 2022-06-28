@@ -19,8 +19,8 @@ const corsOptions = {
 app.use(cors(corsOptions));
 
 app.use((error, req, res, next) => {
-  res.json({ message: error.message })
-})
+  res.json({ message: error.message });
+});
 
 dotenv.config({ path: "./.env" });
 
@@ -85,21 +85,25 @@ app.get("/matchids", (req, res) => {
                     .then(async (body) => {
                       if (body.length === 0) {
                         noMatch = true;
-                        res.json({message: `No matches user${accessIds.findIndex(id=>id==userId)}`, userInfo: {nickname:originalNickname}})
+                        res.json({
+                          message: `No matches user${accessIds.findIndex(
+                            (id) => id == userId
+                          )}`,
+                          userInfo: { nickname: originalNickname },
+                        });
                       } else {
-                        matchIds.push(...body)
+                        matchIds.push(...body);
                       }
-                      }
-                    );
+                    });
                 }
                 if (!noMatch) {
                   if (matchIds.length === 0) {
                     res.json({ message: "No last matches" });
                   } else {
                     res.json({
-                      userInfo: {nickname:originalNickname,accessIds},
+                      userInfo: { nickname: originalNickname, accessIds },
                       matchIds,
-                  });
+                    });
                   }
                 }
               }
@@ -122,77 +126,58 @@ app.get("/matchdetail", async (req, res) => {
   var matchData = [];
 
   for await (const matchId of matchIds) {
-      const data = await fetch(
-        `${apiUrl}/matches/${matchId}`,
-        {
-          method: "GET",
-          headers: HEADER,
-        }
-      ).then((response) => response.json());
-      const matchInfo = data.matchInfo;
+    const data = await fetch(`${apiUrl}/matches/${matchId}`, {
+      method: "GET",
+      headers: HEADER,
+    }).then((response) => response.json());
+    const matchInfo = data.matchInfo;
+    if (
+      matchInfo[0].matchDetail.matchEndType == 0 &&
+      matchInfo[1].matchDetail.matchEndType == 0
+    ) {
       if (
-        matchInfo[0].matchDetail.matchEndType == 0 &&
-        matchInfo[1].matchDetail.matchEndType == 0
+        accessIds.find((id) => id == matchInfo[0].accessId) &&
+        accessIds.find((id) => id == matchInfo[1].accessId)
       ) {
+        totalMatch++;
+        const firstData =
+          matchInfo[matchInfo[0].accessId == accessIds[0] ? 0 : 1];
+        const secondData =
+          matchInfo[matchInfo[0].accessId == accessIds[0] ? 1 : 0];
+
+        if (firstData.matchDetail.matchResult == "승") {
+          totalWin++;
+        } else if (firstData.matchDetail.matchResult == "무") {
+          totalDraw++;
+        } else {
+          totalLose++;
+        }
+
         if (
-          accessIds.find((id) => id == matchInfo[0].accessId) &&
-          accessIds.find((id) => id == matchInfo[1].accessId)
+          firstData.shoot.shootOutScore > 0 ||
+          secondData.shoot.shootOutScore > 0
         ) {
-          totalMatch++;
-          const firstData =
-            matchInfo[
-              matchInfo[0].accessId == accessIds[0]
-                ? 0
-                : 1
-            ];
-          const secondData =
-            matchInfo[
-              matchInfo[0].accessId == accessIds[0]
-                ? 1
-                : 0
-            ];
-
-          if (firstData.matchDetail.matchResult == "승") {
-            totalWin++;
-          } else if (
-            firstData.matchDetail.matchResult == "무"
-          ) {
-            totalDraw++;
-          } else {
-            totalLose++;
-          }
-
-          if (
-            firstData.shoot.shootOutScore > 0 ||
-            secondData.shoot.shootOutScore > 0
-          ) {
-            matchData.push({
-              id: data.matchId,
-              date: data.matchDate,
-              matchResult:
-                firstData.matchDetail.matchResult,
-              firstGoal: firstData.shoot.goalTotalDisplay,
-              secondGoal:
-                secondData.shoot.goalTotalDisplay,
-              shootOut: true,
-              firstShootOutGoal:
-                firstData.shoot.shootOutScore,
-              secondShootOutGoal:
-                secondData.shoot.shootOutScore,
-            });
-          } else {
-            matchData.push({
-              id: data.matchId,
-              date: data.matchDate,
-              matchResult:
-                firstData.matchDetail.matchResult,
-              firstGoal: firstData.shoot.goalTotalDisplay,
-              secondGoal:
-                secondData.shoot.goalTotalDisplay,
-            });
-          }
+          matchData.push({
+            id: data.matchId,
+            date: data.matchDate,
+            matchResult: firstData.matchDetail.matchResult,
+            firstGoal: firstData.shoot.goalTotalDisplay,
+            secondGoal: secondData.shoot.goalTotalDisplay,
+            shootOut: true,
+            firstShootOutGoal: firstData.shoot.shootOutScore,
+            secondShootOutGoal: secondData.shoot.shootOutScore,
+          });
+        } else {
+          matchData.push({
+            id: data.matchId,
+            date: data.matchDate,
+            matchResult: firstData.matchDetail.matchResult,
+            firstGoal: firstData.shoot.goalTotalDisplay,
+            secondGoal: secondData.shoot.goalTotalDisplay,
+          });
         }
       }
+    }
   }
   if (totalMatch === 0) {
     res.json({ message: "No last matches" });
@@ -210,7 +195,7 @@ app.get("/matchdetail", async (req, res) => {
       matchData,
     });
   }
-})
+});
 
 app.get("/match", async (req, res) => {
   const matchId = req.query.matchId;
