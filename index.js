@@ -27,7 +27,7 @@ dotenv.config({ path: "./.env" });
 const apiUrl = "https://api.nexon.co.kr/fifaonline4/v1.0";
 const HEADER = { Authorization: process.env.API_KEY };
 
-app.get("/search", (req, res) => {
+app.get("/matchids", (req, res) => {
   const firstInput = req.query.first;
   const secondInput = req.query.second;
   const offset = req.query.offset;
@@ -36,6 +36,7 @@ app.get("/search", (req, res) => {
     res.status(404).json({ message: "{first} or {second} is required" });
   } else {
     var accessIds = [];
+    var originalNickname = [];
     request(
       apiUrl + "/users",
       {
@@ -50,6 +51,7 @@ app.get("/search", (req, res) => {
           res.json({ message: "First user could not found" });
         } else {
           accessIds.push(body.accessId);
+          originalNickname.push(body.nickname);
           request(
             apiUrl + "/users",
             {
@@ -64,12 +66,10 @@ app.get("/search", (req, res) => {
                 res.json({ message: "Second user could not found" });
               } else {
                 accessIds.push(body.accessId);
+                originalNickname.push(body.nickname);
 
-                var totalMatch = 0;
-                var totalWin = 0;
-                var totalDraw = 0;
-                var totalLose = 0;
-                var matchData = [];
+                var noMatch = false;
+                var matchIds = [];
 
                 for await (const userId of accessIds) {
                   await fetch(
@@ -84,108 +84,23 @@ app.get("/search", (req, res) => {
                     .then((response) => response.json())
                     .then(async (body) => {
                       if (body.length === 0) {
-                        return;
+                        noMatch = true;
+                        res.json({message: `No matches user${accessIds.findIndex(id=>id==userId)}`, userInfo: {nickname:originalNickname}})
                       } else {
-                        for (const matchId of body) {
-                          if (
-                            matchData.find((match) => match.id == matchId) ==
-                            undefined
-                          ) {
-                            const data = await fetch(
-                              `${apiUrl}/matches/${matchId}`,
-                              {
-                                method: "GET",
-                                headers: HEADER,
-                              }
-                            ).then((response) => response.json());
-                            const matchInfo = data.matchInfo;
-                            if (
-                              matchInfo[0].matchDetail.matchEndType == 0 &&
-                              matchInfo[1].matchDetail.matchEndType == 0
-                            ) {
-                              if (
-                                matchInfo[0].accessId ==
-                                  accessIds.find((id) => id != userId) ||
-                                matchInfo[1].accessId ==
-                                  accessIds.find((id) => id != userId)
-                              ) {
-                                totalMatch++;
-                                const firstData =
-                                  matchInfo[
-                                    matchInfo[0].accessId == accessIds[0]
-                                      ? 0
-                                      : 1
-                                  ];
-                                const secondData =
-                                  matchInfo[
-                                    matchInfo[0].accessId == accessIds[0]
-                                      ? 1
-                                      : 0
-                                  ];
-
-                                if (firstData.matchDetail.matchResult == "승") {
-                                  totalWin++;
-                                } else if (
-                                  firstData.matchDetail.matchResult == "무"
-                                ) {
-                                  totalDraw++;
-                                } else {
-                                  totalLose++;
-                                }
-
-                                if (
-                                  firstData.shoot.shootOutScore > 0 ||
-                                  secondData.shoot.shootOutScore > 0
-                                ) {
-                                  matchData.push({
-                                    id: data.matchId,
-                                    date: data.matchDate,
-                                    matchResult:
-                                      firstData.matchDetail.matchResult,
-                                    firstGoal: firstData.shoot.goalTotalDisplay,
-                                    secondGoal:
-                                      secondData.shoot.goalTotalDisplay,
-                                    shootOut: true,
-                                    firstShootOutGoal:
-                                      firstData.shoot.shootOutScore,
-                                    secondShootOutGoal:
-                                      secondData.shoot.shootOutScore,
-                                  });
-                                } else {
-                                  matchData.push({
-                                    id: data.matchId,
-                                    date: data.matchDate,
-                                    matchResult:
-                                      firstData.matchDetail.matchResult,
-                                    firstGoal: firstData.shoot.goalTotalDisplay,
-                                    secondGoal:
-                                      secondData.shoot.goalTotalDisplay,
-                                  });
-                                }
-                              }
-                            }
-                          } else {
-                            continue;
-                          }
-                        }
+                        matchIds.push(...body)
                       }
-                    });
+                      }
+                    );
                 }
-                if (totalMatch === 0) {
-                  res.json({ message: "No last matches" });
-                } else {
-                  res.json({
-                    totalData: {
-                      totalMatch,
-                      totalResult: [totalWin, totalDraw, totalLose],
-                      totalPer: [
-                        Math.round((totalWin / totalMatch) * 100),
-                        Math.round((totalDraw / totalMatch) * 100),
-                        Math.round((totalLose / totalMatch) * 100),
-                      ],
-                    },
-                    matchData,
+                if (!noMatch) {
+                  if (matchIds.length === 0) {
+                    res.json({ message: "No last matches" });
+                  } else {
+                    res.json({
+                      userInfo: {nickname:originalNickname,accessIds},
+                      matchIds,
                   });
+                  }
                 }
               }
             }
@@ -195,6 +110,107 @@ app.get("/search", (req, res) => {
     );
   }
 });
+
+app.get("/matchdetail", async (req, res) => {
+  const accessIds = req.query.accessIds.split(",");
+  const matchIds = req.query.matchIds.split(",");
+
+  var totalMatch = 0;
+  var totalWin = 0;
+  var totalDraw = 0;
+  var totalLose = 0;
+  var matchData = [];
+
+  for await (const matchId of matchIds) {
+      const data = await fetch(
+        `${apiUrl}/matches/${matchId}`,
+        {
+          method: "GET",
+          headers: HEADER,
+        }
+      ).then((response) => response.json());
+      const matchInfo = data.matchInfo;
+      if (
+        matchInfo[0].matchDetail.matchEndType == 0 &&
+        matchInfo[1].matchDetail.matchEndType == 0
+      ) {
+        if (
+          accessIds.find((id) => id == matchInfo[0].accessId) &&
+          accessIds.find((id) => id == matchInfo[1].accessId)
+        ) {
+          totalMatch++;
+          const firstData =
+            matchInfo[
+              matchInfo[0].accessId == accessIds[0]
+                ? 0
+                : 1
+            ];
+          const secondData =
+            matchInfo[
+              matchInfo[0].accessId == accessIds[0]
+                ? 1
+                : 0
+            ];
+
+          if (firstData.matchDetail.matchResult == "승") {
+            totalWin++;
+          } else if (
+            firstData.matchDetail.matchResult == "무"
+          ) {
+            totalDraw++;
+          } else {
+            totalLose++;
+          }
+
+          if (
+            firstData.shoot.shootOutScore > 0 ||
+            secondData.shoot.shootOutScore > 0
+          ) {
+            matchData.push({
+              id: data.matchId,
+              date: data.matchDate,
+              matchResult:
+                firstData.matchDetail.matchResult,
+              firstGoal: firstData.shoot.goalTotalDisplay,
+              secondGoal:
+                secondData.shoot.goalTotalDisplay,
+              shootOut: true,
+              firstShootOutGoal:
+                firstData.shoot.shootOutScore,
+              secondShootOutGoal:
+                secondData.shoot.shootOutScore,
+            });
+          } else {
+            matchData.push({
+              id: data.matchId,
+              date: data.matchDate,
+              matchResult:
+                firstData.matchDetail.matchResult,
+              firstGoal: firstData.shoot.goalTotalDisplay,
+              secondGoal:
+                secondData.shoot.goalTotalDisplay,
+            });
+          }
+        }
+      }
+  }
+  if (totalMatch === 0) {
+    res.json({ message: "No last matches" });
+  } else {
+    res.json({
+      totalData: {
+        totalMatch,
+        totalResult: [totalWin, totalDraw, totalLose],
+        totalPer: [
+          Math.round((totalWin / totalMatch) * 100),
+          Math.round((totalDraw / totalMatch) * 100),
+          Math.round((totalLose / totalMatch) * 100),
+        ],
+      },
+      matchData,
+    });
+  }
+})
 
 app.get("/match", async (req, res) => {
   const matchId = req.query.matchId;
