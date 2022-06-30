@@ -30,13 +30,13 @@ const HEADER = { Authorization: process.env.API_KEY };
 app.get("/matchids", (req, res) => {
   const firstInput = req.query.first;
   const secondInput = req.query.second;
-  const offset = req.query.offset;
-  const limit = req.query.limit;
+
   if (firstInput === undefined || secondInput === undefined) {
     res.status(404).json({ message: "{first} or {second} is required" });
   } else {
     var accessIds = [];
     var originalNickname = [];
+
     request(
       apiUrl + "/users",
       {
@@ -52,6 +52,7 @@ app.get("/matchids", (req, res) => {
         } else {
           accessIds.push(body.accessId);
           originalNickname.push(body.nickname);
+
           request(
             apiUrl + "/users",
             {
@@ -68,43 +69,45 @@ app.get("/matchids", (req, res) => {
                 accessIds.push(body.accessId);
                 originalNickname.push(body.nickname);
 
-                var noMatch = false;
                 var matchIds = [];
 
                 for await (const userId of accessIds) {
-                  await fetch(
-                    `${apiUrl}/users/${userId}/matches?matchtype=40&offset=${
-                      offset ? offset : "0"
-                    }&limit=${limit ? limit : "30"}`,
-                    {
-                      method: "GET",
-                      headers: HEADER,
-                    }
-                  )
-                    .then((response) => response.json())
-                    .then(async (body) => {
-                      if (body.length === 0) {
-                        noMatch = true;
-                        res.json({
-                          message: `No matches user${accessIds.findIndex(
-                            (id) => id == userId
-                          )}`,
-                          userInfo: { nickname: originalNickname },
-                        });
-                      } else {
-                        matchIds.push(...body);
+                  var noMatch = false;
+                  var offset = 0;
+                  while (!noMatch) {
+                    await fetch(
+                      `${apiUrl}/users/${userId}/matches?matchtype=40&offset=${offset}`,
+                      {
+                        method: "GET",
+                        headers: HEADER,
                       }
-                    });
-                }
-                if (!noMatch) {
-                  if (matchIds.length === 0) {
-                    res.json({ message: "No last matches" });
-                  } else {
-                    res.json({
-                      userInfo: { nickname: originalNickname, accessIds },
-                      matchIds,
-                    });
+                    )
+                      .then((response) => response.json())
+                      .then((body) => {
+                        if (body.length === 0) {
+                          if (offset == 0) {
+                            res.json({
+                              message: `No matches user${accessIds.findIndex(
+                                (id) => id == userId
+                              )}`,
+                              userInfo: { nickname: originalNickname },
+                            });
+                          }
+                          noMatch = true;
+                        } else {
+                          matchIds.push(...body);
+                          offset += 100;
+                        }
+                      });
                   }
+                }
+                if (matchIds.length === 0) {
+                  res.json({ message: "No last matches" });
+                } else {
+                  res.json({
+                    userInfo: { nickname: originalNickname, accessIds },
+                    matchIds,
+                  });
                 }
               }
             }
