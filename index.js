@@ -71,10 +71,11 @@ app.get("/matchids", (req, res) => {
 
                 var matchIds = [];
 
+                var noMatch = false;
                 for await (const userId of accessIds) {
-                  var noMatch = false;
+                  var endMatch = false;
                   var offset = 0;
-                  while (!noMatch) {
+                  while (!endMatch) {
                     await fetch(
                       `${apiUrl}/users/${userId}/matches?matchtype=40&offset=${offset}`,
                       {
@@ -92,8 +93,9 @@ app.get("/matchids", (req, res) => {
                               )}`,
                               userInfo: { nickname: originalNickname },
                             });
+                            noMatch = true;
                           }
-                          noMatch = true;
+                          endMatch = true;
                         } else {
                           matchIds.push(...body);
                           offset += 100;
@@ -104,10 +106,12 @@ app.get("/matchids", (req, res) => {
                 if (matchIds.length === 0) {
                   res.json({ message: "No last matches" });
                 } else {
-                  res.json({
-                    userInfo: { nickname: originalNickname, accessIds },
-                    matchIds,
-                  });
+                  if (!noMatch) {
+                    res.json({
+                      userInfo: { nickname: originalNickname, accessIds },
+                      matchIds,
+                    });
+                  }
                 }
               }
             }
