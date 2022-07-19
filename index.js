@@ -98,7 +98,11 @@ app.get("/matchids", (req, res) => {
                           endMatch = true;
                         } else {
                           matchIds.push(...body);
-                          offset += 100;
+                          if (offset >= 100) {
+                            endMatch = true;
+                          } else {
+                            offset += 100;
+                          }
                         }
                       });
                   }
