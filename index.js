@@ -135,8 +135,12 @@ app.get("/matchdetail", async (req, res) => {
   var totalDraw = 0;
   var totalLose = 0;
   var matchData = [];
+  var offset = 0;
 
   for await (const matchId of matchIds) {
+    if (totalMatch == 10) {
+      break;
+    }
     const data = await fetch(`${apiUrl}/matches/${matchId}`, {
       method: "GET",
       headers: HEADER,
@@ -154,7 +158,7 @@ app.get("/matchdetail", async (req, res) => {
         const firstData =
           matchInfo[matchInfo[0].accessId == accessIds[0] ? 0 : 1];
         const secondData =
-          matchInfo[matchInfo[0].accessId == accessIds[0] ? 1 : 0];
+          matchInfo[matchInfo[0].accessId == accessIds[1] ? 0 : 1];
 
         if (firstData.matchDetail.matchResult == "승") {
           totalWin++;
@@ -163,30 +167,19 @@ app.get("/matchdetail", async (req, res) => {
         } else {
           totalLose++;
         }
-
-        if (
-          firstData.shoot.shootOutScore > 0 ||
-          secondData.shoot.shootOutScore > 0
-        ) {
-          matchData.push({
-            id: data.matchId,
-            date: data.matchDate,
-            matchResult: firstData.matchDetail.matchResult,
-            firstGoal: firstData.shoot.goalTotalDisplay,
-            secondGoal: secondData.shoot.goalTotalDisplay,
-            shootOut: true,
-            firstShootOutGoal: firstData.shoot.shootOutScore,
-            secondShootOutGoal: secondData.shoot.shootOutScore,
-          });
-        } else {
-          matchData.push({
-            id: data.matchId,
-            date: data.matchDate,
-            matchResult: firstData.matchDetail.matchResult,
-            firstGoal: firstData.shoot.goalTotalDisplay,
-            secondGoal: secondData.shoot.goalTotalDisplay,
-          });
-        }
+        matchData.push({
+          id: data.matchId,
+          date: data.matchDate,
+          matchResult: firstData.matchDetail.matchResult,
+          firstGoal: firstData.shoot.goalTotalDisplay,
+          secondGoal: secondData.shoot.goalTotalDisplay,
+          shootOut:
+            firstData.shoot.shootOutScore > 0 ||
+            secondData.shoot.shootOutScore > 0,
+          firstShootOutGoal: firstData.shoot.shootOutScore,
+          secondShootOutGoal: secondData.shoot.shootOutScore,
+        });
+        offset = matchIds.indexOf(data.matchId);
       }
     }
   }
@@ -194,6 +187,7 @@ app.get("/matchdetail", async (req, res) => {
     res.json({ message: "No last matches" });
   } else {
     res.json({
+      offset,
       totalData: {
         totalMatch,
         totalResult: [totalWin, totalDraw, totalLose],
