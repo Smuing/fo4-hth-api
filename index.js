@@ -129,6 +129,7 @@ app.get("/matchids", (req, res) => {
 app.get("/matchdetail", async (req, res) => {
   const accessIds = req.query.accessIds.split(",");
   const matchIds = req.query.matchIds.split(",");
+  const abnormalGame = req.query.abnormalGame;
 
   var totalMatch = 0;
   var totalWin = 0;
@@ -146,41 +147,47 @@ app.get("/matchdetail", async (req, res) => {
       headers: HEADER,
     }).then((response) => response.json());
     const matchInfo = data.matchInfo;
-    if (
-      matchInfo[0].matchDetail.matchEndType == 0 &&
-      matchInfo[1].matchDetail.matchEndType == 0
-    ) {
+    if (abnormalGame != "true") {
       if (
-        accessIds.find((id) => id == matchInfo[0].accessId) &&
-        accessIds.find((id) => id == matchInfo[1].accessId)
+        !matchInfo[0].matchDetail.matchEndType == 0 &&
+        !matchInfo[1].matchDetail.matchEndType == 0
       ) {
-        totalMatch++;
-        const firstData =
-          matchInfo[matchInfo[0].accessId == accessIds[0] ? 0 : 1];
-        const secondData =
-          matchInfo[matchInfo[0].accessId == accessIds[1] ? 0 : 1];
-
-        if (firstData.matchDetail.matchResult == "승") {
-          totalWin++;
-        } else if (firstData.matchDetail.matchResult == "무") {
-          totalDraw++;
-        } else {
-          totalLose++;
-        }
-        matchData.push({
-          id: data.matchId,
-          date: data.matchDate,
-          matchResult: firstData.matchDetail.matchResult,
-          firstGoal: firstData.shoot.goalTotalDisplay,
-          secondGoal: secondData.shoot.goalTotalDisplay,
-          shootOut:
-            firstData.shoot.shootOutScore > 0 ||
-            secondData.shoot.shootOutScore > 0,
-          firstShootOutGoal: firstData.shoot.shootOutScore,
-          secondShootOutGoal: secondData.shoot.shootOutScore,
-        });
-        offset = matchIds.indexOf(data.matchId);
+        continue;
       }
+    }
+    if (
+      accessIds.find((id) => id == matchInfo[0].accessId) &&
+      accessIds.find((id) => id == matchInfo[1].accessId)
+    ) {
+      totalMatch++;
+      const firstData =
+        matchInfo[matchInfo[0].accessId == accessIds[0] ? 0 : 1];
+      const secondData =
+        matchInfo[matchInfo[0].accessId == accessIds[1] ? 0 : 1];
+
+      if (firstData.matchDetail.matchResult == "승") {
+        totalWin++;
+      } else if (firstData.matchDetail.matchResult == "무") {
+        totalDraw++;
+      } else {
+        totalLose++;
+      }
+      matchData.push({
+        id: data.matchId,
+        date: data.matchDate,
+        matchResult: firstData.matchDetail.matchResult,
+        firstGoal: firstData.shoot.goalTotalDisplay,
+        secondGoal: secondData.shoot.goalTotalDisplay,
+        shootOut:
+          firstData.shoot.shootOutScore > 0 ||
+          secondData.shoot.shootOutScore > 0,
+        firstShootOutGoal: firstData.shoot.shootOutScore,
+        secondShootOutGoal: secondData.shoot.shootOutScore,
+        abnormalEnd:
+          !matchInfo[0].matchDetail.matchEndType == 0 &&
+          !matchInfo[1].matchDetail.matchEndType == 0,
+      });
+      offset = matchIds.indexOf(data.matchId);
     }
   }
   if (totalMatch === 0) {
