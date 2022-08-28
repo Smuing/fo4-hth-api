@@ -6,18 +6,17 @@ import dotenv from "dotenv";
 
 const app = express();
 
-// const whitelist = ["https://smuing.github.io", "https://fo4hth.site", "http://localhost:5500", "http://127.0.0.1:5500"];
-// const corsOptions = {
-//   origin: function (origin, callback) {
-//     if (whitelist.indexOf(origin) !== -1) {
-//       callback(null, true);
-//     } else {
-//       callback(new Error("Not Allowed Origin"));
-//     }
-//   },
-// };
-// app.use(cors(corsOptions));
-app.use(cors());
+const whitelist = ["https://smuing.github.io", "https://fo4hth.site", "fo4hth://", "http://localhost:5500", "http://127.0.0.1:5500"];
+const corsOptions = {
+  origin: function (origin, callback) {
+    if (whitelist.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      callback(new Error("Not Allowed Origin"));
+    }
+  },
+};
+app.use(cors(corsOptions));
 
 app.use((error, req, res, next) => {
   res.json({ message: error.message });
@@ -31,8 +30,6 @@ const HEADER = { Authorization: process.env.API_KEY };
 app.get("/matchids", (req, res) => {
   const firstInput = req.query.first;
   const secondInput = req.query.second;
-  
-  console.log(req.headers);
 
   if (firstInput === undefined || secondInput === undefined) {
     res.status(404).json({ message: "{first} or {second} is required" });
