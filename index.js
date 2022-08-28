@@ -32,7 +32,7 @@ app.get("/matchids", (req, res) => {
   const firstInput = req.query.first;
   const secondInput = req.query.second;
   
-  console.log(req.headers.origin);
+  console.log(req.headers);
 
   if (firstInput === undefined || secondInput === undefined) {
     res.status(404).json({ message: "{first} or {second} is required" });
