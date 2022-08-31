@@ -6,7 +6,13 @@ import dotenv from "dotenv";
 
 const app = express();
 
-const whitelist = ["https://smuing.github.io", "https://fo4hth.site", "fo4hth://", "http://localhost:5500", "http://127.0.0.1:5500"];
+const whitelist = [
+  "https://smuing.github.io",
+  "https://fo4hth.site",
+  "fo4hth://",
+  "http://localhost:5500",
+  "http://127.0.0.1:5500",
+];
 const corsOptions = {
   origin: function (origin, callback) {
     if (whitelist.indexOf(origin) !== -1) {
@@ -72,6 +78,7 @@ app.get("/matchids", (req, res) => {
                 var matchIds = [];
 
                 var noMatch = false;
+                var noMatchUser = [false, false];
                 for await (const userId of accessIds) {
                   var endMatch = false;
                   var offset = 0;
@@ -87,12 +94,9 @@ app.get("/matchids", (req, res) => {
                       .then((body) => {
                         if (body.length === 0) {
                           if (offset == 0) {
-                            res.json({
-                              message: `No matches user${accessIds.findIndex(
-                                (id) => id == userId
-                              )}`,
-                              userInfo: { nickname: originalNickname },
-                            });
+                            noMatchUser[
+                              accessIds.findIndex((id) => id == userId)
+                            ] = true;
                             noMatch = true;
                           }
                           endMatch = true;
@@ -108,7 +112,19 @@ app.get("/matchids", (req, res) => {
                   }
                 }
                 if (matchIds.length === 0) {
-                  res.json({ message: "No last matches" });
+                  if (noMatchUser[0] && noMatchUser[1]) {
+                    res.json({ message: "No last matches" });
+                  } else if (noMatchUser[0]) {
+                    res.json({
+                      message: `No matches user0`,
+                      userInfo: { nickname: originalNickname },
+                    });
+                  } else {
+                    res.json({
+                      message: `No matches user1`,
+                      userInfo: { nickname: originalNickname },
+                    });
+                  }
                 } else {
                   if (!noMatch) {
                     res.json({
@@ -198,11 +214,6 @@ app.get("/matchdetail", async (req, res) => {
       totalData: {
         totalMatch,
         totalResult: [totalWin, totalDraw, totalLose],
-        totalPer: [
-          Math.round((totalWin / totalMatch) * 100),
-          Math.round((totalDraw / totalMatch) * 100),
-          Math.round((totalLose / totalMatch) * 100),
-        ],
       },
       matchData,
     });
